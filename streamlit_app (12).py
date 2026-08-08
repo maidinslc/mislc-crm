@@ -13,23 +13,109 @@ try:
     PDF_OK=True
 except Exception:
     PDF_OK=False
+try:
+    from emailer import send_invoice_email, build_body, SENDERS
+    MAIL_OK=True
+except Exception:
+    MAIL_OK=False
+try:
+    from calendar_sync import fetch_events, guess_client
+    CAL_OK=True
+except Exception:
+    CAL_OK=False
+try:
+    from drive_archive import archive_invoice
+    DRIVE_OK=True
+except Exception:
+    DRIVE_OK=False
+try:
+    from square_sync import fetch_payments, match_payments
+    SQUARE_OK=True
+except Exception:
+    SQUARE_OK=False
+try:
+    from gmail_mine import scan_sent, suggest_for_client
+    GMINE_OK=True
+except Exception:
+    GMINE_OK=False
 
 st.set_page_config(page_title="Maid In Salt Lake City — CRM", page_icon="🧼", layout="wide")
 
 # Light cosmetic polish only — the app is fully functional without it.
 st.markdown("""
 <style>
-.stApp{ background:#FBF7F6; }
-[data-testid="stMetric"]{ background:#fff; border:1px solid #EEE2DF; border-radius:16px;
-  padding:14px 18px 16px; box-shadow:0 1px 2px rgba(44,36,34,.04),0 8px 22px rgba(44,36,34,.05); }
-[data-testid="stMetricValue"]{ color:#2C2422; font-weight:700; }
-[data-testid="stMetricLabel"] p{ color:#9A8C8A; font-weight:600; font-size:12px; letter-spacing:.03em; text-transform:uppercase; }
-.stButton>button, .stLinkButton>a{ border-radius:10px; font-weight:600; }
-.stLinkButton>a{ background:#FCEFEC !important; color:#A8534D !important; border:1px solid #F3D9D4 !important; }
-.stForm{ background:#fff; border-radius:16px; }
-section[data-testid="stSidebar"]{ background:#fff; border-right:1px solid #EEE2DF; }
-section[data-testid="stSidebar"] img{ border-radius:14px; box-shadow:0 6px 18px rgba(44,36,34,.12); }
-h1,h2,h3{ color:#2C2422; }
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600;6..96,700&family=Archivo:wght@400;500;600;700&display=swap');
+
+:root{
+  --ink:#0B0B0C;         /* brand black */
+  --surface:#141316;     /* raised panel */
+  --line:#2A272C;        /* hairline */
+  --blush:#F8DFDB;       /* brand blush */
+  --rose:#E0A79C;        /* accent */
+  --muted:#948B90;       /* secondary text */
+}
+
+/* ---- ground ---- */
+.stApp{ background:var(--ink); }
+.stApp, .stApp p, .stApp li, .stApp span, .stApp label,
+div[data-testid="stMarkdownContainer"]{
+  font-family:'Archivo',system-ui,sans-serif; color:var(--blush); }
+
+/* ---- display type ---- */
+h1,h2,h3{ font-family:'Bodoni Moda',Georgia,serif !important;
+  color:var(--blush) !important; letter-spacing:-.01em; font-weight:600 !important; }
+h1{ font-size:2.6rem !important; line-height:1.05; }
+h2{ font-size:1.05rem !important; text-transform:uppercase; letter-spacing:.16em;
+  font-family:'Archivo',sans-serif !important; font-weight:600 !important;
+  color:var(--rose) !important; border-bottom:1px solid var(--line);
+  padding-bottom:.5rem; margin-top:2.2rem !important; }
+h3{ font-size:1.15rem !important; }
+.stCaption, small, div[data-testid="stCaptionContainer"] p{ color:var(--muted) !important; }
+
+/* ---- metrics: mirror the invoice's blush bar ---- */
+[data-testid="stMetric"]{
+  background:var(--surface); border:1px solid var(--line); border-top:3px solid var(--blush);
+  border-radius:4px; padding:16px 20px 18px; }
+[data-testid="stMetricLabel"] p{ font-size:10px !important; font-weight:600;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--rose) !important; }
+[data-testid="stMetricValue"]{ font-family:'Bodoni Moda',Georgia,serif !important;
+  font-weight:600; color:var(--blush) !important; }
+
+/* ---- panels ---- */
+[data-testid="stVerticalBlockBorderWrapper"]{
+  background:var(--surface); border:1px solid var(--line); border-radius:4px; }
+div[data-testid="stExpander"]{ border:1px solid var(--line); border-radius:4px;
+  background:var(--surface); }
+div[data-testid="stExpander"] summary p{ font-weight:600; letter-spacing:.04em; }
+
+/* ---- inputs ---- */
+.stApp input, .stApp textarea,
+div[data-baseweb="input"], div[data-baseweb="select"]>div, div[data-baseweb="base-input"]{
+  background:#0F0E11 !important; border:1px solid var(--line) !important;
+  border-radius:3px !important; color:var(--blush) !important; }
+div[data-baseweb="popover"] li{ background:var(--surface) !important; color:var(--blush) !important; }
+div[data-baseweb="select"] svg{ fill:var(--rose) !important; }
+
+/* ---- buttons ---- */
+.stButton>button, .stDownloadButton>button, .stFormSubmitButton>button{
+  background:transparent !important; color:var(--blush) !important;
+  border:1px solid var(--rose) !important; border-radius:3px !important;
+  font-weight:600; letter-spacing:.04em; transition:background .15s ease; }
+.stButton>button:hover, .stDownloadButton>button:hover, .stFormSubmitButton>button:hover{
+  background:var(--rose) !important; color:var(--ink) !important; }
+.stFormSubmitButton>button{ background:var(--blush) !important; color:var(--ink) !important;
+  border-color:var(--blush) !important; }
+
+/* ---- sidebar ---- */
+section[data-testid="stSidebar"]{ background:#0F0E11; border-right:1px solid var(--line); }
+section[data-testid="stSidebar"] img{ border-radius:2px; }
+
+/* ---- date group divider in the calendar importer ---- */
+.daygroup{ font-family:'Archivo',sans-serif; font-size:11px; font-weight:600;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--rose);
+  border-bottom:1px solid var(--line); padding:14px 0 6px; margin-bottom:4px; }
+.evt{ font-weight:600; }
+.evt-meta{ color:var(--muted); font-size:12px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -42,9 +128,12 @@ SOURCES=["Google","Instagram","Referral","Yelp","Nextdoor","Website","Repeat","O
 REVIEWS=["Not asked","Requested","Left review"]
 REVIEW_LINK="https://g.page/r/CcekIQhGlVzeEBM/review"
 DOT={"Active":"🟢","Quoted":"🟡","Lead":"🔵","Paused":"⚪","Lost":"🔴"}
-CLIENT_COLS=["Name","Type","Phone","Email","Address","City","County","Status","Frequency","Price","Cleaner","Source","Review","Notes"]
+CLIENT_COLS=["Name","Type","Phone","Email","Address","City","County","Status","Frequency","Price","Cleaner","Source","Review","Notes","Billing Contact","Billing Email","Billing CC","Terms","Invoiced"]
+TERMS=["Due upon receipt","Net 15","Net 30","Net 45"]
+INVOICED=["Invoice","Pay on site"]
+TERM_DAYS={"Due upon receipt":0,"Net 15":15,"Net 30":30,"Net 45":45}
 SERVICE_COLS=["Date","Client","Type","Cleaner","Amount","Paid"]
-INVOICE_COLS=["Invoice No","Date","Client","Description","Amount","Tax","Status"]
+INVOICE_COLS=["Invoice No","Date","Client","Description","Amount","Tax","Status","Sent","Due","Terms"]
 INVOICE_START=1004  # 1001-1003 already issued (Parc View / Parc at Day Dairy, July 2026)
 
 # ----------------------------------------------------------------------
@@ -58,7 +147,8 @@ def get_sheet():
         creds=Credentials.from_service_account_info(info, scopes=[
             "https://www.googleapis.com/auth/spreadsheets","https://www.googleapis.com/auth/drive"])
         return gspread.authorize(creds).open_by_key(st.secrets["sheet_id"])
-    except Exception:
+    except Exception as e:
+        st.session_state["sheet_error"]=f"{type(e).__name__}: {e}"
         return None
 def _ws(sh,t,cols):
     try: return sh.worksheet(t)
@@ -70,15 +160,18 @@ def load_df(sh,t,cols):
         if c not in df.columns: df[c]=""
     return df[cols]
 def save_df(sh,t,cols,df):
-    ws=_ws(sh,t,cols); df=df.fillna("").astype(str); ws.clear(); ws.update([cols]+df[cols].values.tolist())
+    ws=_ws(sh,t,cols); df=df.fillna("").astype(str)
+    try: ws.resize(rows=max(len(df)+10,50), cols=len(cols))   # grow the grid if columns were added
+    except Exception: pass
+    ws.clear(); ws.update([cols]+df[cols].values.tolist())
 
 def sample_clients():
     return pd.DataFrame([
-        ["Johnson Family","Residential","801-555-0142","kjohnson@email.com","742 Evergreen Ter","Sandy","Salt Lake","Active","Biweekly",140,"Carmen","Google","Not asked","Gate code #4417"],
-        ["Park City Loft","Airbnb","435-555-0188","host.pcloft@email.com","210 Main St #5","Park City","Summit","Active","Airbnb Turnover",95,"Adriana","Repeat","Left review","Same-day turnover, 11am"],
-        ["Draper Dental Office","Commercial","801-555-0173","office@draperdental.com","1180 E Pioneer Rd","Draper","Salt Lake","Active","Weekly",220,"Either","Referral","Requested","After 6pm only"],
-        ["Maria Alvarez","Residential","801-555-0119","malvarez@email.com","388 W 700 S","South Jordan","Salt Lake","Quoted","Monthly",165,"Carmen","Instagram","Not asked","Wants deep clean first"],
-        ["Tyler Brooks","Residential","801-555-0166","tbrooks@email.com","55 Inglenook Dr","Midvale","Salt Lake","Lead","One-time",185,"Either","Website","Not asked","Move-out clean, 2BR"],
+        ["Johnson Family","Residential","801-555-0142","kjohnson@email.com","742 Evergreen Ter","Sandy","Salt Lake","Active","Biweekly",140,"Carmen","Google","Not asked","Gate code #4417","","","","Due upon receipt","Pay on site"],
+        ["Park City Loft","Airbnb","435-555-0188","host.pcloft@email.com","210 Main St #5","Park City","Summit","Active","Airbnb Turnover",95,"Adriana","Repeat","Left review","Same-day turnover, 11am","","","","Due upon receipt","Pay on site"],
+        ["Draper Dental Office","Commercial","801-555-0173","office@draperdental.com","1180 E Pioneer Rd","Draper","Salt Lake","Active","Weekly",220,"Either","Referral","Requested","After 6pm only","","","","Net 30","Invoice"],
+        ["Maria Alvarez","Residential","801-555-0119","malvarez@email.com","388 W 700 S","South Jordan","Salt Lake","Quoted","Monthly",165,"Carmen","Instagram","Not asked","Wants deep clean first","","","","Due upon receipt","Pay on site"],
+        ["Tyler Brooks","Residential","801-555-0166","tbrooks@email.com","55 Inglenook Dr","Midvale","Salt Lake","Lead","One-time",185,"Either","Website","Not asked","Move-out clean, 2BR","","","","Due upon receipt","Pay on site"],
     ], columns=CLIENT_COLS)
 def sample_services():
     d=lambda n:(date.today()-timedelta(days=n)).isoformat()
@@ -123,11 +216,26 @@ with st.sidebar:
     try: st.image(base64.b64decode(LOGO_B64), use_container_width=True)
     except Exception: st.markdown("### Maid In Salt Lake City")
     st.markdown("<div style='text-align:center;font-weight:700;font-size:11px;letter-spacing:.18em;"
-                "text-transform:uppercase;color:#9A8C8A;margin-top:8px'>Client CRM</div>", unsafe_allow_html=True)
+                "text-transform:uppercase;opacity:.7;margin-top:8px'>Client CRM</div>", unsafe_allow_html=True)
     st.divider()
     page=st.radio("Navigate",["Dashboard","Clients","Pipeline","Service Log","Invoices"],label_visibility="collapsed")
     st.divider()
-    if DEMO: st.warning("**Demo mode** — changes reset on reload. Connect a Google Sheet to save.")
+    if DEMO:
+        st.warning("**Demo mode** — changes reset on reload. Connect a Google Sheet to save.")
+        err=st.session_state.get("sheet_error","")
+        if err:
+            with st.expander("Why isn't it connecting?"):
+                st.code(err)
+                if "has not been used in project" in err or "SERVICE_DISABLED" in err:
+                    st.caption("Enable the Google Sheets API and Google Drive API on the "
+                               "mislc-crm project in Google Cloud, then reboot the app.")
+                elif "PERMISSION_DENIED" in err or "403" in err:
+                    st.caption("Share the spreadsheet with crm-bot@mislc-crm.iam.gserviceaccount.com "
+                               "as Editor.")
+                elif "not found" in err.lower() or "404" in err:
+                    st.caption("Check that sheet_id in Streamlit secrets matches your spreadsheet URL.")
+        else:
+            st.caption("No credentials found in Streamlit secrets.")
     else: st.success("Saving to Google Sheets ✓")
 
 # ----------------------------------------------------------------------
@@ -146,6 +254,40 @@ if page=="Dashboard":
     with c[1]: st.metric("Monthly recurring",money(mrr)); st.caption("from active recurring")
     with c[2]: st.metric("Revenue this month",money(rev)); st.caption(f"{money(rev*0.2)} your cut")
     with c[3]: st.metric("Reviews left",reviews); st.caption("goal: 100")
+
+    # ---- Accounts receivable ----
+    _inv=st.session_state.get("invoices",pd.DataFrame(columns=INVOICE_COLS))
+    if len(_inv):
+        openi=_inv[_inv["Status"]!="Paid"].copy()
+        if len(openi):
+            buckets={"Current":0.0,"1-30 days":0.0,"31-60 days":0.0,"60+ days":0.0}
+            for _,r in openi.iterrows():
+                tot=to_num(r["Amount"])+to_num(r.get("Tax",0))
+                try: od=(date.today()-date.fromisoformat(str(r.get("Due","") or r["Date"])[:10])).days
+                except Exception: od=0
+                key="Current" if od<=0 else "1-30 days" if od<=30 else "31-60 days" if od<=60 else "60+ days"
+                buckets[key]+=tot
+            st.subheader("Accounts receivable")
+            ac=st.columns(4)
+            for i,(k,v) in enumerate(buckets.items()):
+                with ac[i]:
+                    st.metric(k,money(v))
+                    if k=="60+ days" and v>0: st.caption("⚠️ chase these")
+            worst=openi.copy()
+            worst["_tot"]=worst.apply(lambda r:to_num(r["Amount"])+to_num(r.get("Tax",0)),axis=1)
+            st.caption("Oldest unpaid: "+", ".join(
+                f"#{r['Invoice No']} {r['Client']} {money(r['_tot'])}"
+                for _,r in worst.sort_values("Date").head(3).iterrows()))
+
+    # ---- Revenue trend ----
+    if len(services):
+        trend=services.copy()
+        trend["Month"]=trend["Date"].astype(str).str[:7]
+        trend["Amt"]=trend["Amount"].apply(to_num)
+        g=trend.groupby("Month")["Amt"].sum().sort_index().tail(12)
+        if len(g)>1:
+            st.subheader("Revenue by month")
+            st.bar_chart(g)
 
     st.subheader("Recent jobs")
     recent=services.sort_values("Date",ascending=False).head(8).copy()
@@ -196,6 +338,49 @@ elif page=="Clients":
                 y.link_button("💬 Text", f"sms:{digits(r['Phone'])}", use_container_width=True)
                 z.link_button("✉ Email", f"mailto:{r['Email']}", use_container_width=True)
 
+    # ---- Recover billing emails from past invoices ----
+    with st.expander("📨 Find billing emails in Gmail", expanded=False):
+        gm=st.secrets.get("gmail",{}) if hasattr(st,"secrets") else {}
+        if not GMINE_OK:
+            st.info("Add gmail_mine.py to the repo to enable this.")
+        elif not (gm.get("address") and gm.get("app_password")):
+            st.warning("Add your Gmail app password to Streamlit secrets first.")
+        else:
+            g1,g2=st.columns(2)
+            kw=g1.text_input("Subject contains","invoice")
+            mb=g2.slider("Months back",6,48,24,step=6)
+            if st.button("🔎 Scan sent mail"):
+                with st.spinner("Reading your Sent folder…"):
+                    try:
+                        st.session_state.gm_people=scan_sent(gm["address"],gm["app_password"],mb,kw)
+                    except Exception as ex:
+                        st.error(f"Gmail read failed: {ex}")
+            people=st.session_state.get("gm_people",[])
+            if people:
+                st.caption(f"{len(people)} address(es) you've sent invoices to. "
+                           "Assign the ones that belong to a client.")
+                names=clients["Name"].tolist()
+                for n,p in enumerate(people[:40]):
+                    ranked=suggest_for_client(" ".join(names),[p])
+                    cc=st.columns([3,2,1.2],vertical_alignment="center")
+                    label=f"<span class='evt'>{p['email']}</span><br><span class='evt-meta'>"\
+                          f"{p['name'] or '—'} · {p['count']} email(s) · last {p['last_date']}</span>"
+                    cc[0].markdown(label,unsafe_allow_html=True)
+                    guess=""
+                    for nm in names:
+                        if suggest_for_client(nm,[p]): guess=nm; break
+                    who=cc[1].selectbox("Client",[""]+names,
+                            index=(names.index(guess)+1) if guess in names else 0,
+                            key=f"gm{n}",label_visibility="collapsed")
+                    field=cc[2].selectbox("Field",["Billing Email","Billing Cc","Email"],
+                            key=f"gf{n}",label_visibility="collapsed")
+                    if who and cc[2].button("Save",key=f"gs{n}",use_container_width=True):
+                        col={"Billing Email":"Billing Email","Billing Cc":"Billing CC","Email":"Email"}[field]
+                        idx=st.session_state.clients.index[st.session_state.clients["Name"]==who]
+                        if len(idx):
+                            st.session_state.clients.at[idx[0],col]=p["email"]
+                            persist(); st.success(f"{p['email']} → {who}"); st.rerun()
+
     st.subheader("Add a client")
     with st.form("add_client", clear_on_submit=True):
         a,b=st.columns(2); name=a.text_input("Name"); typ=b.selectbox("Type",TYPES)
@@ -206,10 +391,13 @@ elif page=="Clients":
         a5,b5=st.columns(2); price=a5.number_input("Price / clean ($)",min_value=0,step=5); cleaner=b5.selectbox("Cleaner",CLEANERS,index=2)
         a6,b6=st.columns(2); source=a6.selectbox("Source",SOURCES); review=b6.selectbox("Review",REVIEWS)
         notes=st.text_area("Notes")
+        st.markdown("**Billing contact** — used when emailing invoices")
+        b1,b2=st.columns(2); bcontact=b1.text_input("Billing contact name"); bemail=b2.text_input("Billing email")
+        b3,b4,b5=st.columns(3); bcc=b3.text_input("Billing Cc (AP inbox)"); bterms=b4.selectbox("Terms",TERMS); binv=b5.selectbox("Billing style",INVOICED)
         if st.form_submit_button("➕ Add client"):
             if not name.strip(): st.warning("Add a name first.")
             else:
-                new=pd.DataFrame([[name,typ,phone,email,addr,city,county,status,freq,price,cleaner,source,review,notes]],columns=CLIENT_COLS)
+                new=pd.DataFrame([[name,typ,phone,email,addr,city,county,status,freq,price,cleaner,source,review,notes,bcontact,bemail,bcc,bterms,binv]],columns=CLIENT_COLS)
                 st.session_state.clients=pd.concat([st.session_state.clients,new],ignore_index=True)
                 persist(); st.success(f"Added {name}."); st.rerun()
 
@@ -228,9 +416,19 @@ elif page=="Clients":
                 a5,b5=st.columns(2); price=a5.number_input("Price / clean ($)",min_value=0,step=5,value=int(to_num(r["Price"]))); cleaner=b5.selectbox("Cleaner",CLEANERS,index=CLEANERS.index(r["Cleaner"]) if r["Cleaner"] in CLEANERS else 2)
                 a6,b6=st.columns(2); source=a6.selectbox("Source",SOURCES,index=SOURCES.index(r["Source"]) if r["Source"] in SOURCES else 0); review=b6.selectbox("Review",REVIEWS,index=REVIEWS.index(r["Review"]) if r["Review"] in REVIEWS else 0)
                 notes=st.text_area("Notes",r["Notes"])
+                st.markdown("**Billing contact** — used when emailing invoices")
+                e1,e2=st.columns(2)
+                bcontact=e1.text_input("Billing contact name",str(r.get("Billing Contact","") or ""))
+                bemail=e2.text_input("Billing email",str(r.get("Billing Email","") or ""))
+                e3,e4,e5=st.columns(3)
+                bcc=e3.text_input("Billing Cc (AP inbox)",str(r.get("Billing CC","") or ""))
+                _iv=str(r.get("Invoiced","") or "Pay on site")
+                binv=e5.selectbox("Billing style",INVOICED,index=INVOICED.index(_iv) if _iv in INVOICED else 1)
+                _t=str(r.get("Terms","") or "Due upon receipt")
+                bterms=e4.selectbox("Terms",TERMS,index=TERMS.index(_t) if _t in TERMS else 0)
                 s1,s2=st.columns(2)
                 if s1.form_submit_button("💾 Save changes"):
-                    st.session_state.clients.iloc[i]=[name,typ,phone,email,addr,city,county,status,freq,price,cleaner,source,review,notes]
+                    st.session_state.clients.iloc[i]=[name,typ,phone,email,addr,city,county,status,freq,price,cleaner,source,review,notes,bcontact,bemail,bcc,bterms,binv]
                     persist(); st.success("Saved."); st.rerun()
                 if s2.form_submit_button("🗑 Delete client"):
                     st.session_state.clients=st.session_state.clients.drop(st.session_state.clients.index[i]).reset_index(drop=True)
@@ -264,6 +462,79 @@ elif page=="Service Log":
     c[0].metric("Jobs logged",len(services))
     c[1].metric("Total billed",money(total))
     c[2].metric("Your cut (20%)",money(total*0.2))
+
+    # ---- Pull jobs off Google Calendar ----
+    with st.expander("📅 Import from Google Calendar", expanded=False):
+        cal_id = st.secrets.get("calendar_id","") if hasattr(st,"secrets") else ""
+        sa = dict(st.secrets.get("gcp_service_account",{})) if hasattr(st,"secrets") else {}
+        if not CAL_OK:
+            st.info("Calendar module not loaded — add google-api-python-client to requirements.txt.")
+        elif not (cal_id and sa):
+            st.warning("Add `calendar_id` to Streamlit secrets and share the calendar with "
+                       "your service account to enable this.")
+        else:
+            c1,c2=st.columns(2)
+            d1=c1.date_input("From",value=date.today()-timedelta(days=30),key="cal_from")
+            d2=c2.date_input("To",value=date.today(),key="cal_to")
+            if st.button("🔄 Load calendar events"):
+                try:
+                    st.session_state.cal_events=fetch_events(sa,cal_id,d1,d2)
+                except Exception as e:
+                    st.error(f"Could not read calendar: {e}")
+            evs=st.session_state.get("cal_events",[])
+            if evs:
+                logged=set(zip(services["Date"].astype(str),services["Client"].astype(str)))
+                names=clients["Name"].tolist()
+                st.caption(f"{len(evs)} event(s) · {d1} to {d2}. Untick anything that isn't a job.")
+                hdr=st.columns([0.5,3.1,2,1.2])
+                hdr[1].caption("EVENT"); hdr[2].caption("CLIENT"); hdr[3].caption("AMOUNT")
+                picks=[]; lastday=None
+                for n,e in enumerate(evs):
+                    if e["date"]!=lastday:
+                        lastday=e["date"]
+                        try: pretty=date.fromisoformat(e["date"]).strftime("%A, %B %-d")
+                        except Exception: pretty=e["date"]
+                        st.markdown(f"<div class='daygroup'>{pretty}</div>",unsafe_allow_html=True)
+                    g=guess_client(e["title"],names)
+                    already=(e["date"],g) in logged
+                    cc=st.columns([0.5,3.1,2,1.2],vertical_alignment="center")
+                    take=cc[0].checkbox("pick",value=not already,key=f"ce{n}",
+                                        label_visibility="collapsed")
+                    loc=str(e.get("location","") or "")
+                    meta=" · ".join(x for x in [e["start"],loc,("already logged" if already else "")] if x)
+                    cc[1].markdown(f"<span class='evt'>{e['title']}</span><br>"
+                                   f"<span class='evt-meta'>{meta}</span>",unsafe_allow_html=True)
+                    who=cc[2].selectbox("Client",[""]+names,
+                            index=(names.index(g)+1) if g in names else 0,
+                            key=f"cw{n}",label_visibility="collapsed")
+                    amt=cc[3].number_input("$",min_value=0.0,step=5.0,value=0.0,
+                            key=f"ca{n}",label_visibility="collapsed")
+                    if take and who: picks.append((e,who,amt))
+                if st.button(f"➕ Log {len(picks)} job(s)",disabled=not picks):
+                    add=pd.DataFrame([[e["date"],who,
+                                       "Commercial" if str(clients[clients["Name"]==who]["Type"].iloc[0])=="Commercial" else "Residential",
+                                       "Either",amt,"No"] for e,who,amt in picks],columns=SERVICE_COLS)
+                    st.session_state.services=pd.concat([st.session_state.services,add],ignore_index=True)
+
+                    # backfill client address / city from the calendar event location
+                    filled=0
+                    for e,who,amt in picks:
+                        loc=str(e.get("location","") or "").strip()
+                        if not loc: continue
+                        idx=st.session_state.clients.index[st.session_state.clients["Name"]==who]
+                        if len(idx)==0: continue
+                        i0=idx[0]
+                        if str(st.session_state.clients.at[i0,"Address"] or "").strip(): continue
+                        parts=[p.strip() for p in loc.split(",")]
+                        st.session_state.clients.at[i0,"Address"]=parts[0]
+                        if len(parts)>1 and not str(st.session_state.clients.at[i0,"City"] or "").strip():
+                            st.session_state.clients.at[i0,"City"]=parts[1]
+                        filled+=1
+
+                    persist()
+                    msg=f"Logged {len(picks)} job(s)."
+                    if filled: msg+=f" Filled in {filled} client address(es) from the calendar."
+                    st.success(msg); st.rerun()
 
     st.subheader("Log a job")
     with st.form("add_job", clear_on_submit=True):
@@ -314,6 +585,10 @@ elif page=="Invoices":
         nums=[int(to_num(x)) for x in inv["Invoice No"].tolist() if to_num(x)] if len(inv) else []
         return max(nums+[INVOICE_START-1])+1
 
+    def cinfo(name):
+        row=clients[clients["Name"]==name]
+        return row.iloc[0] if not row.empty else None
+
     def bill_to(name):
         row=clients[clients["Name"]==name]
         if row.empty: return "",""
@@ -326,11 +601,18 @@ elif page=="Invoices":
         return {"invoice_no":str(rec["Invoice No"]),"date":str(rec["Date"]),
                 "client":str(rec["Client"]),"addr1":a1,"addr2":a2,
                 "description":str(rec["Description"]),"detail":"","qty":1,
-                "rate":to_num(rec["Amount"]),"tax":to_num(rec.get("Tax",0)),"po":""}
+                "rate":to_num(rec["Amount"]),"tax":to_num(rec.get("Tax",0)),"po":"",
+                "terms":str(rec.get("Terms","") or "Due upon receipt"),
+                "due":str(rec.get("Due","") or "")}
 
     # ---- Create from a logged job ----
     st.subheader("Create an invoice")
-    unbilled=services.copy()
+    billable=set(clients[clients["Invoiced"].astype(str)!="Pay on site"]["Name"].tolist())
+    unbilled=services[services["Client"].isin(billable)].copy() if billable else services.copy()
+    skipped=len(services)-len(unbilled)
+    if skipped:
+        st.caption(f"{skipped} job(s) hidden — those clients are set to “Pay on site.” "
+                   "Change a client's billing style on the Clients page to invoice them.")
     if len(unbilled):
         labels=[f"{r['Date']} — {r['Client']} — {money(to_num(r['Amount']))}" for _,r in unbilled.iterrows()]
         k=st.selectbox("Pick a logged job",range(len(labels)),format_func=lambda i:labels[i])
@@ -344,9 +626,24 @@ elif page=="Invoices":
             amt=a2.number_input("Amount ($)",min_value=0.0,step=5.0,value=float(to_num(job["Amount"])))
             tax=b2.number_input("Sales tax ($)",min_value=0.0,step=1.0,value=0.0)
             if st.form_submit_button("🧾 Create invoice"):
-                new=pd.DataFrame([[ino,idate.isoformat(),job["Client"],desc,amt,tax,"Unpaid"]],columns=INVOICE_COLS)
+                ci=cinfo(str(job["Client"]))
+                trm=str(ci.get("Terms","") if ci is not None else "") or "Due upon receipt"
+                due=(idate+timedelta(days=TERM_DAYS.get(trm,0))).isoformat()
+                new=pd.DataFrame([[ino,idate.isoformat(),job["Client"],desc,amt,tax,"Unpaid","",due,trm]],columns=INVOICE_COLS)
                 st.session_state.invoices=pd.concat([st.session_state.invoices,new],ignore_index=True)
-                persist(); st.success(f"Invoice {ino} created."); st.rerun()
+                note=""
+                fid=st.secrets.get("drive_folder_id","") if hasattr(st,"secrets") else ""
+                sa=dict(st.secrets.get("gcp_service_account",{})) if hasattr(st,"secrets") else {}
+                if DRIVE_OK and PDF_OK and fid and sa:
+                    try:
+                        safe=''.join(ch for ch in str(job["Client"]) if ch.isalnum() or ch==' ').strip().replace(' ','_')[:40]
+                        archive_invoice(sa,fid,f"Invoice_{ino}_{safe}.pdf",
+                                        build_invoice(job_dict(new.iloc[0])),
+                                        year=idate.year,client=job["Client"])
+                        note=" Archived to Drive."
+                    except Exception as ex:
+                        note=f" (Drive archive failed: {ex})"
+                persist(); st.success(f"Invoice {ino} created."+note); st.rerun()
     else:
         st.info("Log a job first — invoices are built from the Service Log.")
 
@@ -359,7 +656,15 @@ elif page=="Invoices":
                 paid = str(r["Status"])=="Paid"
                 a.markdown(f"**#{r['Invoice No']} · {r['Client']}**  \n"
                            f"{r['Date']} · {r['Description']} · {money(to_num(r['Amount'])+to_num(r.get('Tax',0)))}")
-                b.markdown("🟢 **Paid**" if paid else "🔴 **Unpaid**")
+                sent=str(r.get("Sent","") or "")
+                due=str(r.get("Due","") or "")
+                flag="🟢 **Paid**" if paid else "🔴 **Unpaid**"
+                if not paid and due:
+                    try:
+                        od=(date.today()-date.fromisoformat(due)).days
+                        if od>0: flag=f"🔴 **{od}d overdue**"
+                    except Exception: pass
+                b.markdown(flag+(f"  \nsent {sent}" if sent else "  \nnot sent"))
                 if PDF_OK:
                     c.download_button("⬇️ PDF",build_invoice(job_dict(r)),
                                       file_name=f"Invoice_{r['Invoice No']}_{str(r['Client']).replace(' ','_')}.pdf",
@@ -367,6 +672,89 @@ elif page=="Invoices":
                 if c.button("Paid ✓" if not paid else "Mark unpaid",key=f"pd{i}",use_container_width=True):
                     st.session_state.invoices.at[i,"Status"]="Unpaid" if paid else "Paid"
                     persist(); st.rerun()
+
+        # ---- Email an invoice ----
+        st.subheader("Email an invoice")
+        if not MAIL_OK:
+            st.info("Email module not loaded — make sure emailer.py is in the repo.")
+        else:
+            gm=st.secrets.get("gmail",{}) if hasattr(st,"secrets") else {}
+            gaddr=gm.get("address",""); gpw=gm.get("app_password","")
+            if not (gaddr and gpw):
+                st.warning("Add your Gmail app password to Streamlit secrets to enable sending. "
+                           "Until then, use the ⬇️ PDF buttons above.")
+            pick=[f"#{r['Invoice No']} — {r['Client']} — {money(to_num(r['Amount']))}"
+                  for _,r in inv.iterrows()]
+            chosen=st.multiselect("Invoice(s) to send",range(len(pick)),
+                                  format_func=lambda i:pick[i])
+            rows=[inv.iloc[i] for i in chosen]
+            default_to=default_cc=default_hi=""
+            if rows:
+                ci=cinfo(str(rows[0]["Client"]))
+                if ci is not None:
+                    default_to=str(ci.get("Billing Email","") or ci.get("Email","") or "")
+                    default_cc=str(ci.get("Billing CC","") or "")
+                    default_hi=str(ci.get("Billing Contact","") or "").split(" ")[0]
+            e1,e2=st.columns(2)
+            to_addr=e1.text_input("To",default_to,placeholder="brittany@example.com")
+            cc_addr=e2.text_input("Cc (optional)",default_cc,placeholder="pv.invoices@example.com")
+            e3,e4=st.columns(2)
+            greeting=e3.text_input("Greeting name",default_hi,placeholder="Brittany")
+            sender=e4.selectbox("Sign as",list(SENDERS.keys()))
+            units=", ".join(f"#{str(r['Description']).split('#')[-1].strip()}"
+                            for r in rows if "#" in str(r['Description']))
+            nos=", ".join(f"#{r['Invoice No']}" for r in rows)
+            subj=st.text_input("Subject",
+                f"Maid In Salt Lake City [INVOICE] — {units or nos}" if rows
+                else "Maid In Salt Lake City [INVOICE]")
+            lines=[f"{r['Description']} — {r['Date']} — {money(to_num(r['Amount'])+to_num(r.get('Tax',0)))} (Inv. {r['Invoice No']})"
+                   for r in rows]
+            body=st.text_area("Message",build_body(lines,sender,greeting) if rows else "",height=220)
+            if st.button("📧 Send email",disabled=not (rows and to_addr and gaddr and gpw)):
+                atts=[(f"Invoice_{r['Invoice No']}_{''.join(ch for ch in str(r['Client']) if ch.isalnum() or ch==' ').strip().replace(' ','_')[:40]}.pdf",
+                       build_invoice(job_dict(r))) for r in rows]
+                ok,err=send_invoice_email([to_addr],subj,body,atts,gaddr,gpw,[cc_addr])
+                if ok:
+                    stamp=date.today().isoformat()
+                    for i in chosen: st.session_state.invoices.at[inv.index[i],"Sent"]=stamp
+                    persist(); st.success(f"Sent to {to_addr}."); st.rerun()
+                else:
+                    st.error(err)
+
+        # ---- Square reconciliation ----
+        st.subheader("Match Square payments")
+        sq=st.secrets.get("square",{}) if hasattr(st,"secrets") else {}
+        tok=sq.get("access_token","")
+        if not SQUARE_OK:
+            st.info("Square module not loaded — make sure square_sync.py is in the repo.")
+        elif not tok:
+            st.caption("Add your Square access token to Streamlit secrets to reconcile payments automatically.")
+        else:
+            if st.button("🔄 Check Square for payments"):
+                try:
+                    st.session_state.sq_pay=fetch_payments(tok,60,sq.get("environment","production"))
+                except Exception as ex:
+                    st.error(f"Square error: {ex}")
+            pays=st.session_state.get("sq_pay",[])
+            if pays:
+                pairs=match_payments(pays,inv,to_num)
+                st.caption(f"{len(pays)} payment(s) in the last 60 days · {len(pairs)} match open invoices.")
+                if pairs:
+                    for p,idx,r in pairs:
+                        c=st.columns([3,1])
+                        c[0].markdown(f"**{money(p['amount'])}** on {p['date']} ({p['source']}) "
+                                      f"→ #{r['Invoice No']} · {r['Client']}")
+                        if c[1].button("Mark paid",key=f"sq{p['id']}",use_container_width=True):
+                            st.session_state.invoices.at[idx,"Status"]="Paid"
+                            persist(); st.success(f"#{r['Invoice No']} marked paid."); st.rerun()
+                    if st.button("✅ Mark all matched as paid"):
+                        for p,idx,r in pairs: st.session_state.invoices.at[idx,"Status"]="Paid"
+                        persist(); st.success(f"{len(pairs)} invoice(s) marked paid."); st.rerun()
+                unmatched=[p for p in pays if p["id"] not in {q["id"] for q,_,_ in pairs}]
+                if unmatched:
+                    with st.expander(f"{len(unmatched)} payment(s) with no matching invoice"):
+                        for p in unmatched:
+                            st.write(f"{money(p['amount'])} · {p['date']} · {p['source']} {p['note']}")
 
         # ---- Batch ----
         st.subheader("Batch download")

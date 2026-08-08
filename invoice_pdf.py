@@ -40,20 +40,13 @@ LOGO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAQQAAAD0CAMAAABKM6iVAAAAYFBMVEX//PT+7+X75tz3
 
 BIZ = [
     ("Maid In Salt Lake City", True),
-    ("54 W Inglenook Dr Apt 811", False),
+    ("54 W Inglenook Dr", False),
     ("Midvale, UT 84047", False),
     ("801-708-4014", False),
     ("maidinslc@gmail.com", False),
 ]
 
-def _pay_text(job):
-    t = str(job.get('terms') or "Due upon receipt").strip()
-    due = str(job.get('due','')).strip()
-    if t.lower().startswith("net"):
-        lead = f"Payment terms are {t}" + (f", due {due}." if due else ".")
-    else:
-        lead = "Payment is due upon receipt."
-    return (lead + " Please make checks payable to Maid In Salt Lake City. "
+PAY_TEXT = ("Payment is due upon receipt. Please make checks payable to Maid In Salt Lake City. "
             "To pay by card, Venmo, or Zelle, call or text 801-708-4014.")
 
 W, H = letter
@@ -124,17 +117,14 @@ def build_invoice(job):
 
     c.setFillColor(ACCENT)
     c.setFont("Helvetica-Bold", 7.5)
-    c.drawString(COL2, _y(238), "TERMS")
+    c.drawString(COL2, _y(244), "TERMS")
     c.setFillColor(DARK)
     c.setFont("Helvetica", 10)
-    c.drawString(COL2, _y(250), str(job.get('terms') or "Due upon receipt"))
-    if str(job.get('due','')).strip():
-        c.setFillColor(GREY); c.setFont("Helvetica", 9)
-        c.drawString(COL2, _y(262), f"Due {job['due']}")
+    c.drawString(COL2, _y(258), "Due upon receipt")
     if str(job.get('po', '')).strip():
         c.setFillColor(GREY)
         c.setFont("Helvetica", 9)
-        c.drawString(COL2, _y(273), f"PO / Ref: {job['po']}")
+        c.drawString(COL2, _y(272), f"PO / Ref: {job['po']}")
 
     # Table header
     c.setFillColor(PINK_BAR)
@@ -204,7 +194,7 @@ def build_invoice(job):
     c.setFillColor(DARK)
     c.setFont("Helvetica", 9.5)
     line, lines = "", []
-    for wd in _pay_text(job).split():
+    for wd in PAY_TEXT.split():
         trial = (line + " " + wd).strip()
         if c.stringWidth(trial, "Helvetica", 9.5) > (R - L - 28):
             lines.append(line)
